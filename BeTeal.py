@@ -87,7 +87,7 @@ if __name__ == '__main__':
     teal_frames.sort(key=lambda x: x["teal_distance"], reverse=True)
 
     # save tealest frame
-    cv2.imwrite(f"{OUTPUT_PATH}Be{args.color[0].upper() + args.color[1:]}est.PNG", teal_frames[-1]["frame"])
+    cv2.imwrite(f"{OUTPUT_PATH}Be{args.color[0].upper() + args.color[1:]}{'' if args.color[-1] == 'e' else 'e'}st.PNG", teal_frames[-1]["frame"])
 
     # save video
     progress_bar(80, f"⚠️ Time to Be{args.color[0].upper() + args.color[1:]}. ⚠️")
