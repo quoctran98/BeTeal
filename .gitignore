@@ -1,0 +1,4 @@
+*.MP4
+*.PNG
+/BeReals/*
+.DS_Store
