@@ -4,10 +4,10 @@ BeTeal reorganizes your BeReal Recap video from less teal frames to more teal fr
 
 ## Usage
 
-1. Clone this repository and install open-cv
+1. Clone this repository and install dependencies.
 
 ```bash
-pip install opencv-python
+pip install opencv-python numpy matplotib
 ```
 
 2. Download your BeReal Recap video from the app and save it in the same directory as the script.
@@ -21,3 +21,4 @@ python3 BeTeal.py -i "./BeReal 2022 Video Recap.MP4" -o "./"
 
 4. The script will output `BeTeal.MP4`, which is the BeTealed Recap, and `BeTealest.PNG`, which is the tealest BeReal in your BeReal Recap video.
 
+A secret `-c` flag can be used to specify the color to score the BeReal frames. The default is teal, but you can use any color in the `matplotlib.colors` library.

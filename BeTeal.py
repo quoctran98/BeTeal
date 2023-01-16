@@ -2,9 +2,9 @@ import argparse
 import cv2
 import os
 import numpy as np
+from matplotlib import colors
 
 if __name__ == '__main__':
-    TEAL = np.array([128, 128, 0])
 
     # parse filepath arguments
     parser = argparse.ArgumentParser(description="Make your BeTeal!")
@@ -14,12 +14,20 @@ if __name__ == '__main__':
     parser.add_argument("-o", "--output_path", type=str,
                         default="./",
                         help="path to save the BeTeal video and image")
+    parser.add_argument("-c", "--color", type=str,
+                        default="teal",
+                        help="color to score the BeReal recap against")
     args = parser.parse_args()
 
     INPUT_FILE = args.input_file
     OUTPUT_PATH = args.output_path
     if not os.path.exists(OUTPUT_PATH):
         os.mkdir(OUTPUT_PATH)
+
+    # convert color (teal) to BGR
+    color = colors.to_rgba(args.color)
+    # BGR order for some reason
+    TEAL  = np.array([int(color[1]*255), int(color[2]*255), int(color[0]*255)])
 
     # not perfect but fast enough :)
     def different_frame(frame1, frame2, threshold=1):
