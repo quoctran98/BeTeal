@@ -21,7 +21,7 @@ def different_frame(frame_idx, threshold=1):
 
 def score_tealness(frame_dict):
     teal_distance = np.array([np.sqrt(np.sum((pixel - TEAL)**2)) for pixel in frame_dict["frame"]])
-    frame_dict["teal_distance"] = np.median(teal_distance)
+    frame_dict["teal_distance"] = np.mean(teal_distance)
     return(frame_dict)
 
 # this is all fake :)
@@ -95,8 +95,11 @@ if __name__ == '__main__':
     resolution = teal_frames[-1]["frame"].shape[:2]
     # fps is lower than original video because no frame duplicates
     out = cv2.VideoWriter(f"{OUTPUT_PATH}Be{args.color[0].upper() + args.color[1:]}.MP4", fourcc, 10.0, (resolution[1], resolution[0])) 
-    for f in teal_frames:
+    for i, f in enumerate(teal_frames):
         out.write(f["frame"])
+        if i == len(teal_frames) - 1: # pause on the last frame!
+            for _ in range(19):
+                out.write(f["frame"])
     out.release()
     
     progress_bar(100, f"⚠️ Time to Be{args.color[0].upper() + args.color[1:]}. ⚠️")
