@@ -1,11 +1,37 @@
 import argparse
 import cv2
 import os
+import time
 import numpy as np
 from matplotlib import colors
+from pathos.multiprocessing import ProcessingPool as Pool
+
+# not perfect but fast enough :)
+# i don't like that teal_frames is a global variable but it's the easiest way to pass it to the Pool
+def different_frame(frame_idx, threshold=1):
+    frame1 = teal_frames[frame_idx]["frame"]
+    try:
+        frame2 = teal_frames[frame_idx-1]["frame"]
+    except IndexError:       
+        return True
+    f1_avg_col = np.mean(frame1, axis=(0, 1))
+    f2_avg_col = np.mean(frame2, axis=(0, 1))
+    # seems to be << 1 for the same frame and > 10 for different frames
+    return(np.sqrt(np.sum((f1_avg_col - f2_avg_col)**2)) > threshold)
+
+def score_tealness(frame_dict):
+    teal_distance = np.array([np.sqrt(np.sum((pixel - TEAL)**2)) for pixel in frame_dict["frame"]])
+    frame_dict["teal_distance"] = np.median(teal_distance)
+    return(frame_dict)
+
+# this is all fake :)
+def progress_bar(percent, task_name, bar_length=20):
+    arrow = "█" * int(percent/100 * bar_length - 1)
+    spaces = " " * (bar_length - len(arrow))
+    ending = '\n' if percent == 100 else '\r'
+    print(f"\r{task_name} [{arrow}{spaces}] {percent:.2f}%", end=ending)
 
 if __name__ == '__main__':
-
     # parse filepath arguments
     parser = argparse.ArgumentParser(description="Make your BeTeal!")
     parser.add_argument("-i", "--input_file", type=str,
@@ -29,49 +55,49 @@ if __name__ == '__main__':
     # BGR order for some reason
     TEAL  = np.array([int(color[1]*255), int(color[2]*255), int(color[0]*255)])
 
-    # not perfect but fast enough :)
-    def different_frame(frame1, frame2, threshold=1):
-        if frame1 is None or frame2 is None:
-            return True
-        f1_avg_col = np.mean(frame1, axis=(0, 1))
-        f2_avg_col = np.mean(frame2, axis=(0, 1))
-        # seems to be << 1 for the same frame and > 10 for different frames
-        return(np.sqrt(np.sum((f1_avg_col - f2_avg_col)**2)) > threshold)
+    start_time = time.time()
 
-    # go through each frame and score the tealness
+    # save all frames before scoring
+    progress_bar(0, f"⚠️ Time to Be{args.color[0].upper() + args.color[1:]}. ⚠️")
     capture = cv2.VideoCapture(INPUT_FILE)
-    teal_frames = [] # tuple of (frame, frame_idx, avg_teal_distance)
+    teal_frames = [] # list of dict of (frame, idx, teal_distance)
     frame_idx = 0
     last_frame = None
-    print("Calculating tealness...")
     while (True):
         success, frame = capture.read()
         if success:
-            # there are frame duplicates because the video speed changes
-            if different_frame(frame, last_frame):
-                teal_distance = np.array([np.sqrt(np.sum((pixel - TEAL)**2)) for pixel in frame])
-                avg_teal_distance = np.median(teal_distance)
-                teal_frames.append((frame, frame_idx, avg_teal_distance))
-                last_frame = frame
+            teal_frames.append({"frame": frame, "idx": frame_idx})
         else:
             break
         frame_idx += 1
     capture.release()
 
+    # remove duplicate frames
+    progress_bar(30, f"⚠️ Time to Be{args.color[0].upper() + args.color[1:]}. ⚠️")
+    with Pool() as p:
+        is_unique_frame = p.map(different_frame, range(len(teal_frames)))
+        teal_frames = [f for f, u in zip(teal_frames, is_unique_frame) if u]
+
+    # score tealness
+    progress_bar(70, f"⚠️ Time to Be{args.color[0].upper() + args.color[1:]}. ⚠️")
+    with Pool() as p:
+        teal_frames = p.map(score_tealness, teal_frames)
+
     # sort by tealest frames
-    teal_frames.sort(key=lambda x: x[2], reverse=True)
+    teal_frames.sort(key=lambda x: x["teal_distance"], reverse=True)
 
     # save tealest frame
-    cv2.imwrite(f"{OUTPUT_PATH}BeTealest.PNG", teal_frames[-1][0])
+    cv2.imwrite(f"{OUTPUT_PATH}Be{args.color[0].upper() + args.color[1:]}est.PNG", teal_frames[-1]["frame"])
 
     # save video
-    print("Saving video...")
+    progress_bar(80, f"⚠️ Time to Be{args.color[0].upper() + args.color[1:]}. ⚠️")
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    resolution = teal_frames[-1][0].shape[:2]
+    resolution = teal_frames[-1]["frame"].shape[:2]
     # fps is lower than original video because no frame duplicates
-    out = cv2.VideoWriter(f"{OUTPUT_PATH}BeTeal.MP4", fourcc, 10.0, (resolution[1], resolution[0])) 
-    for frame, frame_idx, avg_teal_distance in teal_frames:
-        out.write(frame)
+    out = cv2.VideoWriter(f"{OUTPUT_PATH}Be{args.color[0].upper() + args.color[1:]}.MP4", fourcc, 10.0, (resolution[1], resolution[0])) 
+    for f in teal_frames:
+        out.write(f["frame"])
     out.release()
-
-    print("⚠️ Time to BeTeal. ⚠️")
+    
+    progress_bar(100, f"⚠️ Time to Be{args.color[0].upper() + args.color[1:]}. ⚠️")
+    print(f"Be{args.color[0].upper() + args.color[1:]} video created at {OUTPUT_PATH}Be{args.color[0].upper() + args.color[1:]}.MP4 in {time.time() - start_time:.2f} seconds.")
